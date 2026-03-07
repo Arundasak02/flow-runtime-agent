@@ -1,0 +1,355 @@
+{
+  "graphId" : "payment-service-project",
+  "nodes" : [ {
+    "id" : "com.greens.order.config.KafkaProducerConfig#kafkaTemplate():KafkaTemplate<String, String>",
+    "type" : "METHOD",
+    "name" : "KafkaProducerConfig.kafkaTemplate",
+    "data" : {
+      "visibility" : "PUBLIC",
+      "className" : "KafkaProducerConfig",
+      "packageName" : "com.greens.order.config",
+      "moduleName" : "order",
+      "signature" : "kafkaTemplate():KafkaTemplate<String, String>"
+    }
+  }, {
+    "id" : "com.greens.order.core.OrderService#placeOrder(String):String",
+    "type" : "METHOD",
+    "name" : "OrderService.placeOrder",
+    "data" : {
+      "visibility" : "PUBLIC",
+      "className" : "OrderService",
+      "packageName" : "com.greens.order.core",
+      "moduleName" : "order",
+      "signature" : "placeOrder(String):String"
+    }
+  }, {
+    "id" : "com.greens.order.core.PaymentService#charge(String):void",
+    "type" : "METHOD",
+    "name" : "PaymentService.charge",
+    "data" : {
+      "visibility" : "PUBLIC",
+      "className" : "PaymentService",
+      "packageName" : "com.greens.order.core",
+      "moduleName" : "order",
+      "signature" : "charge(String):void"
+    }
+  }, {
+    "id" : "com.greens.order.core.OrderService#checkInventory(String):void",
+    "type" : "PRIVATE_METHOD",
+    "name" : "OrderService.checkInventory",
+    "data" : {
+      "visibility" : "PRIVATE",
+      "className" : "OrderService",
+      "packageName" : "com.greens.order.core",
+      "moduleName" : "order",
+      "signature" : "checkInventory(String):void"
+    }
+  }, {
+    "id" : "com.greens.order.config.KafkaProducerConfig#producerFactory():ProducerFactory<String, String>",
+    "type" : "METHOD",
+    "name" : "KafkaProducerConfig.producerFactory",
+    "data" : {
+      "visibility" : "PUBLIC",
+      "className" : "KafkaProducerConfig",
+      "packageName" : "com.greens.order.config",
+      "moduleName" : "order",
+      "signature" : "producerFactory():ProducerFactory<String, String>"
+    }
+  }, {
+    "id" : "com.greens.order.messaging.OrderConsumer#onMessage(String):void",
+    "type" : "METHOD",
+    "name" : "OrderConsumer.onMessage",
+    "data" : {
+      "visibility" : "PUBLIC",
+      "className" : "OrderConsumer",
+      "packageName" : "com.greens.order.messaging",
+      "moduleName" : "order",
+      "signature" : "onMessage(String):void"
+    }
+  }, {
+    "id" : "com.greens.order.core.OrderService#saveOrder(String):void",
+    "type" : "PRIVATE_METHOD",
+    "name" : "OrderService.saveOrder",
+    "data" : {
+      "visibility" : "PRIVATE",
+      "className" : "OrderService",
+      "packageName" : "com.greens.order.core",
+      "moduleName" : "order",
+      "signature" : "saveOrder(String):void"
+    }
+  }, {
+    "id" : "com.greens.order.core.OrderService#publishEvent(String):void",
+    "type" : "PRIVATE_METHOD",
+    "name" : "OrderService.publishEvent",
+    "data" : {
+      "visibility" : "PRIVATE",
+      "className" : "OrderService",
+      "packageName" : "com.greens.order.core",
+      "moduleName" : "order",
+      "signature" : "publishEvent(String):void"
+    }
+  }, {
+    "id" : "com.greens.order.web.OrderController#placeOrder(String):String",
+    "type" : "METHOD",
+    "name" : "OrderController.placeOrder",
+    "data" : {
+      "visibility" : "PUBLIC",
+      "className" : "OrderController",
+      "packageName" : "com.greens.order.web",
+      "moduleName" : "order",
+      "signature" : "placeOrder(String):String"
+    }
+  }, {
+    "id" : "com.greens.order.core.OrderService#validateCart(String):void",
+    "type" : "PRIVATE_METHOD",
+    "name" : "OrderService.validateCart",
+    "data" : {
+      "visibility" : "PRIVATE",
+      "className" : "OrderService",
+      "packageName" : "com.greens.order.core",
+      "moduleName" : "order",
+      "signature" : "validateCart(String):void"
+    }
+  }, {
+    "id" : "com.greens.order.web.OrderController#getOrder(String):String",
+    "type" : "METHOD",
+    "name" : "OrderController.getOrder",
+    "data" : {
+      "visibility" : "PUBLIC",
+      "className" : "OrderController",
+      "packageName" : "com.greens.order.web",
+      "moduleName" : "order",
+      "signature" : "getOrder(String):String"
+    }
+  }, {
+    "id" : "endpoint:POST /api/orders/{id}",
+    "type" : "ENDPOINT",
+    "name" : "POST /api/orders/{id}",
+    "data" : {
+      "httpMethod" : "POST",
+      "path" : "/api/orders/{id}"
+    }
+  }, {
+    "id" : "endpoint:GET /api/orders/{id}",
+    "type" : "ENDPOINT",
+    "name" : "GET /api/orders/{id}",
+    "data" : {
+      "httpMethod" : "GET",
+      "path" : "/api/orders/{id}"
+    }
+  }, {
+    "id" : "topic:orders.v1",
+    "type" : "TOPIC",
+    "name" : "orders.v1",
+    "data" : { }
+  }, {
+    "id" : "com.greens.order.messaging.OrderConsumer",
+    "type" : "CLASS",
+    "name" : "OrderConsumer",
+    "data" : {
+      "className" : "OrderConsumer",
+      "packageName" : "com.greens.order.messaging",
+      "moduleName" : "order"
+    }
+  }, {
+    "id" : "service:order",
+    "type" : "SERVICE",
+    "name" : "order",
+    "data" : {
+      "moduleName" : "order"
+    }
+  }, {
+    "id" : "com.greens.order.core.PaymentService",
+    "type" : "CLASS",
+    "name" : "PaymentService",
+    "data" : {
+      "className" : "PaymentService",
+      "packageName" : "com.greens.order.core",
+      "moduleName" : "order"
+    }
+  }, {
+    "id" : "com.greens.order.web.OrderController",
+    "type" : "CLASS",
+    "name" : "OrderController",
+    "data" : {
+      "className" : "OrderController",
+      "packageName" : "com.greens.order.web",
+      "moduleName" : "order"
+    }
+  }, {
+    "id" : "com.greens.order.config.KafkaProducerConfig",
+    "type" : "CLASS",
+    "name" : "KafkaProducerConfig",
+    "data" : {
+      "className" : "KafkaProducerConfig",
+      "packageName" : "com.greens.order.config",
+      "moduleName" : "order"
+    }
+  }, {
+    "id" : "com.greens.order.core.OrderService",
+    "type" : "CLASS",
+    "name" : "OrderService",
+    "data" : {
+      "className" : "OrderService",
+      "packageName" : "com.greens.order.core",
+      "moduleName" : "order"
+    }
+  } ],
+  "edges" : [ {
+    "id" : "e-class-service-0",
+    "from" : "com.greens.order.messaging.OrderConsumer",
+    "to" : "service:order",
+    "type" : "BELONGS_TO",
+    "data" : { }
+  }, {
+    "id" : "e-class-service-1",
+    "from" : "com.greens.order.core.PaymentService",
+    "to" : "service:order",
+    "type" : "BELONGS_TO",
+    "data" : { }
+  }, {
+    "id" : "e-class-service-2",
+    "from" : "com.greens.order.web.OrderController",
+    "to" : "service:order",
+    "type" : "BELONGS_TO",
+    "data" : { }
+  }, {
+    "id" : "e-class-service-3",
+    "from" : "com.greens.order.config.KafkaProducerConfig",
+    "to" : "service:order",
+    "type" : "BELONGS_TO",
+    "data" : { }
+  }, {
+    "id" : "e-class-service-4",
+    "from" : "com.greens.order.core.OrderService",
+    "to" : "service:order",
+    "type" : "BELONGS_TO",
+    "data" : { }
+  }, {
+    "id" : "e-call-1",
+    "from" : "com.greens.order.core.OrderService#placeOrder(String):String",
+    "to" : "com.greens.order.core.OrderService#validateCart(String):void",
+    "type" : "CALL",
+    "data" : { }
+  }, {
+    "id" : "e-call-2",
+    "from" : "com.greens.order.core.OrderService#placeOrder(String):String",
+    "to" : "com.greens.order.core.OrderService#checkInventory(String):void",
+    "type" : "CALL",
+    "data" : { }
+  }, {
+    "id" : "e-call-3",
+    "from" : "com.greens.order.core.OrderService#placeOrder(String):String",
+    "to" : "com.greens.order.core.PaymentService#charge(String):void",
+    "type" : "CALL",
+    "data" : { }
+  }, {
+    "id" : "e-call-4",
+    "from" : "com.greens.order.core.OrderService#placeOrder(String):String",
+    "to" : "com.greens.order.core.OrderService#publishEvent(String):void",
+    "type" : "CALL",
+    "data" : { }
+  }, {
+    "id" : "e-call-5",
+    "from" : "com.greens.order.core.OrderService#placeOrder(String):String",
+    "to" : "com.greens.order.core.OrderService#saveOrder(String):void",
+    "type" : "CALL",
+    "data" : { }
+  }, {
+    "id" : "e-call-6",
+    "from" : "com.greens.order.web.OrderController#placeOrder(String):String",
+    "to" : "com.greens.order.core.OrderService#placeOrder(String):String",
+    "type" : "CALL",
+    "data" : { }
+  }, {
+    "id" : "e-endpoint-1",
+    "from" : "endpoint:POST /api/orders/{id}",
+    "to" : "com.greens.order.web.OrderController#placeOrder(String):String",
+    "type" : "HANDLES",
+    "data" : { }
+  }, {
+    "id" : "e-endpoint-2",
+    "from" : "endpoint:GET /api/orders/{id}",
+    "to" : "com.greens.order.web.OrderController#getOrder(String):String",
+    "type" : "HANDLES",
+    "data" : { }
+  }, {
+    "id" : "e-produces-1",
+    "from" : "com.greens.order.core.OrderService#publishEvent(String):void",
+    "to" : "topic:orders.v1",
+    "type" : "PRODUCES",
+    "data" : { }
+  }, {
+    "id" : "e-consumes-2",
+    "from" : "topic:orders.v1",
+    "to" : "com.greens.order.messaging.OrderConsumer#onMessage(String):void",
+    "type" : "CONSUMES",
+    "data" : { }
+  }, {
+    "id" : "e-method-class-15",
+    "from" : "com.greens.order.config.KafkaProducerConfig#kafkaTemplate():KafkaTemplate<String, String>",
+    "to" : "com.greens.order.config.KafkaProducerConfig",
+    "type" : "DEFINES",
+    "data" : { }
+  }, {
+    "id" : "e-method-class-16",
+    "from" : "com.greens.order.core.OrderService#placeOrder(String):String",
+    "to" : "com.greens.order.core.OrderService",
+    "type" : "DEFINES",
+    "data" : { }
+  }, {
+    "id" : "e-method-class-17",
+    "from" : "com.greens.order.core.PaymentService#charge(String):void",
+    "to" : "com.greens.order.core.PaymentService",
+    "type" : "DEFINES",
+    "data" : { }
+  }, {
+    "id" : "e-method-class-18",
+    "from" : "com.greens.order.core.OrderService#checkInventory(String):void",
+    "to" : "com.greens.order.core.OrderService",
+    "type" : "DEFINES",
+    "data" : { }
+  }, {
+    "id" : "e-method-class-19",
+    "from" : "com.greens.order.config.KafkaProducerConfig#producerFactory():ProducerFactory<String, String>",
+    "to" : "com.greens.order.config.KafkaProducerConfig",
+    "type" : "DEFINES",
+    "data" : { }
+  }, {
+    "id" : "e-method-class-20",
+    "from" : "com.greens.order.messaging.OrderConsumer#onMessage(String):void",
+    "to" : "com.greens.order.messaging.OrderConsumer",
+    "type" : "DEFINES",
+    "data" : { }
+  }, {
+    "id" : "e-method-class-21",
+    "from" : "com.greens.order.core.OrderService#saveOrder(String):void",
+    "to" : "com.greens.order.core.OrderService",
+    "type" : "DEFINES",
+    "data" : { }
+  }, {
+    "id" : "e-method-class-22",
+    "from" : "com.greens.order.core.OrderService#publishEvent(String):void",
+    "to" : "com.greens.order.core.OrderService",
+    "type" : "DEFINES",
+    "data" : { }
+  }, {
+    "id" : "e-method-class-23",
+    "from" : "com.greens.order.web.OrderController#placeOrder(String):String",
+    "to" : "com.greens.order.web.OrderController",
+    "type" : "DEFINES",
+    "data" : { }
+  }, {
+    "id" : "e-method-class-24",
+    "from" : "com.greens.order.core.OrderService#validateCart(String):void",
+    "to" : "com.greens.order.core.OrderService",
+    "type" : "DEFINES",
+    "data" : { }
+  }, {
+    "id" : "e-method-class-25",
+    "from" : "com.greens.order.web.OrderController#getOrder(String):String",
+    "to" : "com.greens.order.web.OrderController",
+    "type" : "DEFINES",
+    "data" : { }
+  } ]
+}

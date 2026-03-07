@@ -1,0 +1,123 @@
+package com.flow.agent.config;
+
+import java.util.List;
+
+/**
+ * Immutable agent configuration. Built by ConfigLoader.
+ */
+public class AgentConfig {
+
+    private boolean enabled = true;
+    private ServerConfig server = new ServerConfig();
+    private String graphId;
+    private String serviceName;
+    private PackagesConfig packages = new PackagesConfig();
+    private FilterConfig filter = new FilterConfig();
+    private SamplingConfig sampling = new SamplingConfig();
+    private PipelineConfig pipeline = new PipelineConfig();
+    private CircuitBreakerConfig circuitBreaker = new CircuitBreakerConfig();
+
+    // ── Nested config classes ────────────────────────────────────────────────
+
+    public static class ServerConfig {
+        private String url;
+        private String apiKey;
+        private int connectTimeoutMs = 5000;
+        private int readTimeoutMs = 5000;
+
+        public String getUrl() { return url; }
+        public void setUrl(String url) { this.url = url; }
+        public String getApiKey() { return apiKey; }
+        public void setApiKey(String apiKey) { this.apiKey = apiKey; }
+        public int getConnectTimeoutMs() { return connectTimeoutMs; }
+        public void setConnectTimeoutMs(int connectTimeoutMs) { this.connectTimeoutMs = connectTimeoutMs; }
+        public int getReadTimeoutMs() { return readTimeoutMs; }
+        public void setReadTimeoutMs(int readTimeoutMs) { this.readTimeoutMs = readTimeoutMs; }
+    }
+
+    public static class PackagesConfig {
+        private List<String> include;
+        private List<String> exclude = List.of();
+
+        public List<String> getInclude() { return include; }
+        public void setInclude(List<String> include) { this.include = include; }
+        public List<String> getExclude() { return exclude; }
+        public void setExclude(List<String> exclude) { this.exclude = exclude; }
+    }
+
+    public static class FilterConfig {
+        private boolean skipGettersSetters = true;
+        private boolean skipConstructors = true;
+        private boolean skipPrivateMethods = false;
+        private boolean skipSynthetic = true;
+
+        public boolean isSkipGettersSetters() { return skipGettersSetters; }
+        public void setSkipGettersSetters(boolean skipGettersSetters) { this.skipGettersSetters = skipGettersSetters; }
+        public boolean isSkipConstructors() { return skipConstructors; }
+        public void setSkipConstructors(boolean skipConstructors) { this.skipConstructors = skipConstructors; }
+        public boolean isSkipPrivateMethods() { return skipPrivateMethods; }
+        public void setSkipPrivateMethods(boolean skipPrivateMethods) { this.skipPrivateMethods = skipPrivateMethods; }
+        public boolean isSkipSynthetic() { return skipSynthetic; }
+        public void setSkipSynthetic(boolean skipSynthetic) { this.skipSynthetic = skipSynthetic; }
+    }
+
+    public static class SamplingConfig {
+        private double rate = 1.0;
+
+        public double getRate() { return rate; }
+        public void setRate(double rate) { this.rate = rate; }
+    }
+
+    public static class PipelineConfig {
+        private int bufferSize = 8192;
+        private int batchSize = 100;
+        private int flushIntervalMs = 200;
+
+        public int getBufferSize() { return bufferSize; }
+        public void setBufferSize(int bufferSize) { this.bufferSize = bufferSize; }
+        public int getBatchSize() { return batchSize; }
+        public void setBatchSize(int batchSize) { this.batchSize = batchSize; }
+        public int getFlushIntervalMs() { return flushIntervalMs; }
+        public void setFlushIntervalMs(int flushIntervalMs) { this.flushIntervalMs = flushIntervalMs; }
+    }
+
+    public static class CircuitBreakerConfig {
+        private int failureThreshold = 3;
+        private int resetTimeoutMs = 30000;
+
+        public int getFailureThreshold() { return failureThreshold; }
+        public void setFailureThreshold(int failureThreshold) { this.failureThreshold = failureThreshold; }
+        public int getResetTimeoutMs() { return resetTimeoutMs; }
+        public void setResetTimeoutMs(int resetTimeoutMs) { this.resetTimeoutMs = resetTimeoutMs; }
+    }
+
+    // ── Top-level getters/setters ────────────────────────────────────────────
+
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    public ServerConfig getServer() { return server; }
+    public void setServer(ServerConfig server) { this.server = server; }
+
+    public String getGraphId() { return graphId; }
+    public void setGraphId(String graphId) { this.graphId = graphId; }
+
+    public String getServiceName() { return serviceName; }
+    public void setServiceName(String serviceName) { this.serviceName = serviceName; }
+
+    public PackagesConfig getPackages() { return packages; }
+    public void setPackages(PackagesConfig packages) { this.packages = packages; }
+
+    public FilterConfig getFilter() { return filter; }
+    public void setFilter(FilterConfig filter) { this.filter = filter; }
+
+    public SamplingConfig getSampling() { return sampling; }
+    public void setSampling(SamplingConfig sampling) { this.sampling = sampling; }
+
+    public PipelineConfig getPipeline() { return pipeline; }
+    public void setPipeline(PipelineConfig pipeline) { this.pipeline = pipeline; }
+
+    public CircuitBreakerConfig getCircuitBreaker() { return circuitBreaker; }
+    public void setCircuitBreaker(CircuitBreakerConfig circuitBreaker) { this.circuitBreaker = circuitBreaker; }
+}
+
