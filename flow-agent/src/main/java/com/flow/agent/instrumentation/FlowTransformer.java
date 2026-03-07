@@ -45,6 +45,40 @@ public class FlowTransformer {
 
                 .installOn(instrumentation);
 
+        // ── Entry-point isolation (Spring MVC + Kafka) ──────────────────────
+        // Force new trace context at HTTP/Kafka entry points to prevent context leaks
+        // when the Spring controller method is outside the instrumented packages.
+        // Uses string-based annotation names (not class references) so this works even
+        // if Spring is NOT on the agent's classpath — ByteBuddy resolves on the
+        // customer's classloader.
+        new AgentBuilder.Default()
+                .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
+                .with(new SafeTransformListener())
+                .disableClassFormatChanges()
+
+                // Match Spring MVC controllers and Kafka listener classes
+                .type(ElementMatchers.isAnnotatedWith(
+                        ElementMatchers.named("org.springframework.web.bind.annotation.RestController")
+                                .or(ElementMatchers.named("org.springframework.stereotype.Controller"))
+                ))
+
+                .transform((builder, typeDescription, classLoader, module, protectionDomain) ->
+                        builder.visit(
+                                Advice.to(EntryPointAdvice.class)
+                                        .on(ElementMatchers.isAnnotatedWith(
+                                                ElementMatchers.named("org.springframework.web.bind.annotation.GetMapping")
+                                                        .or(ElementMatchers.named("org.springframework.web.bind.annotation.PostMapping"))
+                                                        .or(ElementMatchers.named("org.springframework.web.bind.annotation.PutMapping"))
+                                                        .or(ElementMatchers.named("org.springframework.web.bind.annotation.DeleteMapping"))
+                                                        .or(ElementMatchers.named("org.springframework.web.bind.annotation.PatchMapping"))
+                                                        .or(ElementMatchers.named("org.springframework.web.bind.annotation.RequestMapping"))
+                                                        .or(ElementMatchers.named("org.springframework.kafka.annotation.KafkaListener"))
+                                        ))
+                        )
+                )
+
+                .installOn(instrumentation);
+
         // ── Checkpoint SDK interception ──────────────────────────────────────
         // Intercept com.flow.sdk.Flow#checkpoint() calls to emit CHECKPOINT events.
         // Two-arg: checkpoint(String, Object)

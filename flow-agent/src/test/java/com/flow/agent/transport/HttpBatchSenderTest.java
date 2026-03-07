@@ -108,7 +108,7 @@ class HttpBatchSenderTest {
 
         assertTrue(requestLatch.await(3, TimeUnit.SECONDS), "Request should arrive");
         assertEquals(1, receivedRequests.size());
-        assertEquals("/ingest/runtime", receivedRequests.get(0).path);
+        assertEquals("/ingest/runtime/batch", receivedRequests.get(0).path);
     }
 
     @Test

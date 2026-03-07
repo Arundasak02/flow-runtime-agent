@@ -157,8 +157,17 @@ class NodeIdBuilderTest {
 
     @Test
     void simplifyType_fullyQualifiedCustomClass() {
+        // New behaviour (Option A): ALL FQN prefixes are stripped — matches adapter's SignatureNormalizer.
         String result = NodeIdBuilder.simplifyType("com.example.OrderService");
-        assertEquals("com.example.OrderService", result);
+        assertEquals("OrderService", result);
+    }
+
+    @Test
+    void simplifyType_springKafkaTemplate() {
+        // Verifies the key motivating case: Spring types stripped just like java.util types.
+        String result = NodeIdBuilder.simplifyType(
+                "org.springframework.kafka.core.KafkaTemplate<java.lang.String, java.lang.String>");
+        assertEquals("KafkaTemplate<String, String>", result);
     }
 
     @Test

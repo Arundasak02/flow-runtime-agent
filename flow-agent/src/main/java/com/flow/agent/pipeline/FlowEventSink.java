@@ -68,5 +68,28 @@ public class FlowEventSink {
                 nodeId, "CHECKPOINT", timestamp, 0L, null, data);
         buf.offer(event);
     }
+
+    /**
+     * Signal that a trace is complete (all spans have exited).
+     *
+     * <p>Emits a synthetic {@code TRACE_COMPLETE} event that the server uses to trigger
+     * the merge pipeline immediately, rather than waiting for the idle-timeout scheduler.
+     *
+     * <p>Non-blocking. Never throws. Silently dropped if buffer is full or not initialised.
+     *
+     * @param traceId the completed traceId
+     */
+    public static void emitTraceComplete(String traceId) {
+        EventRingBuffer buf = ringBuffer;
+        if (buf == null) return;
+
+        // No sampling gate here — trace-complete signals must always be sent
+        // to prevent traces from being stranded in the server buffer.
+        RuntimeEvent event = new RuntimeEvent(
+                traceId, null, null,
+                "__trace_complete__", "TRACE_COMPLETE",
+                System.currentTimeMillis(), 0L, null);
+        buf.offer(event);
+    }
 }
 

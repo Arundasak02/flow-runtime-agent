@@ -17,7 +17,7 @@ import java.util.List;
  * <p>Uses Java 11's {@link HttpClient#sendAsync} — the application thread is NEVER blocked.
  * The circuit breaker protects against repeated FCS outages.
  *
- * <p>Endpoint: {@code POST {flow.server.url}/ingest/runtime}
+ * <p>Endpoint: {@code POST {flow.server.url}/ingest/runtime/batch}
  * Headers: {@code Content-Type: application/json}, {@code Content-Encoding: gzip}
  */
 public class HttpBatchSender {
@@ -58,7 +58,7 @@ public class HttpBatchSender {
             byte[] body = serializer.serialize(graphId, events);
 
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(baseUrl + "/ingest/runtime"))
+                    .uri(URI.create(baseUrl + "/ingest/runtime/batch"))
                     .timeout(Duration.ofMillis(5000))
                     .header("Content-Type", "application/json")
                     .header("Content-Encoding", "gzip")

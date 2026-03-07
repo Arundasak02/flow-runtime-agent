@@ -98,6 +98,9 @@ public class MethodAdvice {
 
             // CRITICAL: clear ThreadLocal when root span exits to prevent trace corruption
             if (ctx.isSpanStackEmpty()) {
+                // Signal trace completion so the server triggers the merge pipeline
+                // immediately rather than waiting for the idle-timeout scheduler.
+                FlowEventSink.emitTraceComplete(ctx.getTraceId());
                 FlowContext.clear();
             }
 
