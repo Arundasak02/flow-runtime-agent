@@ -2,6 +2,8 @@ package com.flow.agent.pipeline;
 
 import com.flow.agent.sampling.Sampler;
 
+import java.util.Map;
+
 /**
  * Static entry point for emitting runtime events from ByteBuddy advice code.
  *
@@ -45,6 +47,25 @@ public class FlowEventSink {
         RuntimeEvent event = new RuntimeEvent(
                 traceId, spanId, parentSpanId,
                 nodeId, type, timestamp, durationMs, errorType);
+        buf.offer(event);
+    }
+
+    /**
+     * Emit a CHECKPOINT event with extracted data.
+     * Non-blocking. Never throws. If the buffer is full or not yet initialised, silently dropped.
+     */
+    public static void emitCheckpoint(String traceId, String spanId, String parentSpanId,
+                                      String nodeId, long timestamp,
+                                      Map<String, Object> data) {
+        EventRingBuffer buf = ringBuffer;
+        if (buf == null) return;
+
+        Sampler s = sampler;
+        if (s != null && !s.sample(traceId)) return;
+
+        RuntimeEvent event = new RuntimeEvent(
+                traceId, spanId, parentSpanId,
+                nodeId, "CHECKPOINT", timestamp, 0L, null, data);
         buf.offer(event);
     }
 }

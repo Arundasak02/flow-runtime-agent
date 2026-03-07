@@ -174,6 +174,27 @@ public class ConfigLoader {
         if (skipSynthetic != null) {
             config.getFilter().setSkipSynthetic(Boolean.parseBoolean(skipSynthetic));
         }
+
+        // ── Capture config ──────────────────────────────────────────────────
+        String captureEnabled = System.getProperty("flow.capture.enabled");
+        if (captureEnabled != null) {
+            config.getCapture().setEnabled(Boolean.parseBoolean(captureEnabled));
+        }
+
+        String captureMaxDepth = System.getProperty("flow.capture.max-depth");
+        if (captureMaxDepth != null) {
+            config.getCapture().setMaxDepth(Integer.parseInt(captureMaxDepth));
+        }
+
+        String captureMaxFields = System.getProperty("flow.capture.max-fields");
+        if (captureMaxFields != null) {
+            config.getCapture().setMaxFields(Integer.parseInt(captureMaxFields));
+        }
+
+        String captureExcludePatterns = System.getProperty("flow.capture.global-exclude-patterns");
+        if (captureExcludePatterns != null && !captureExcludePatterns.isEmpty()) {
+            config.getCapture().setGlobalExcludePatterns(splitCsv(captureExcludePatterns));
+        }
     }
 
     // ── Agent args parsing (key=value,key2=value2) ───────────────────────────
@@ -248,6 +269,16 @@ public class ConfigLoader {
                 v -> config.getCircuitBreaker().setFailureThreshold(Integer.parseInt(v)));
         applyIfPresent(props, "flow.circuit-breaker.reset-timeout-ms",
                 v -> config.getCircuitBreaker().setResetTimeoutMs(Integer.parseInt(v)));
+
+        // ── Capture config ──────────────────────────────────────────────────
+        applyIfPresent(props, "flow.capture.enabled",
+                v -> config.getCapture().setEnabled(Boolean.parseBoolean(v)));
+        applyIfPresent(props, "flow.capture.max-depth",
+                v -> config.getCapture().setMaxDepth(Integer.parseInt(v)));
+        applyIfPresent(props, "flow.capture.max-fields",
+                v -> config.getCapture().setMaxFields(Integer.parseInt(v)));
+        applyIfPresent(props, "flow.capture.global-exclude-patterns",
+                v -> config.getCapture().setGlobalExcludePatterns(splitCsv(v)));
     }
 
     private static void applyIfPresent(Properties props, String key,

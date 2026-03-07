@@ -16,6 +16,7 @@ public class AgentConfig {
     private SamplingConfig sampling = new SamplingConfig();
     private PipelineConfig pipeline = new PipelineConfig();
     private CircuitBreakerConfig circuitBreaker = new CircuitBreakerConfig();
+    private CaptureConfig capture = new CaptureConfig();
 
     // ── Nested config classes ────────────────────────────────────────────────
 
@@ -91,6 +92,44 @@ public class AgentConfig {
         public void setResetTimeoutMs(int resetTimeoutMs) { this.resetTimeoutMs = resetTimeoutMs; }
     }
 
+    /**
+     * Configuration for checkpoint object extraction and PII safety.
+     *
+     * <p>Global exclude patterns act as a <strong>safety net</strong> — even if a developer
+     * forgets {@code @FlowExclude} on a PII field, field names matching these patterns are
+     * never captured. Patterns are case-insensitive and support leading/trailing wildcards.
+     */
+    public static class CaptureConfig {
+        private boolean enabled = true;
+        private int maxDepth = 2;
+        private int maxFields = 50;
+        private List<String> globalExcludePatterns = List.of(
+                "*password*", "*passwd*", "*secret*", "*token*",
+                "*creditcard*", "*credit_card*", "*cardnumber*", "*card_number*",
+                "*ssn*", "*socialsecurity*", "*social_security*",
+                "*email*", "*phone*", "*mobile*",
+                "*address*",
+                "*apikey*", "*api_key*",
+                "*privatekey*", "*private_key*",
+                "*accesstoken*", "*access_token*", "*refreshtoken*", "*refresh_token*",
+                "*authorization*", "*auth_header*",
+                "*cvv*", "*cvc*", "*expiry*",
+                "*bankaccount*", "*bank_account*", "*routing*", "*iban*",
+                "*pin*", "*otp*"
+        );
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        public int getMaxDepth() { return maxDepth; }
+        public void setMaxDepth(int maxDepth) { this.maxDepth = maxDepth; }
+        public int getMaxFields() { return maxFields; }
+        public void setMaxFields(int maxFields) { this.maxFields = maxFields; }
+        public List<String> getGlobalExcludePatterns() { return globalExcludePatterns; }
+        public void setGlobalExcludePatterns(List<String> globalExcludePatterns) {
+            this.globalExcludePatterns = globalExcludePatterns;
+        }
+    }
+
     // ── Top-level getters/setters ────────────────────────────────────────────
 
     public boolean isEnabled() { return enabled; }
@@ -119,5 +158,8 @@ public class AgentConfig {
 
     public CircuitBreakerConfig getCircuitBreaker() { return circuitBreaker; }
     public void setCircuitBreaker(CircuitBreakerConfig circuitBreaker) { this.circuitBreaker = circuitBreaker; }
+
+    public CaptureConfig getCapture() { return capture; }
+    public void setCapture(CaptureConfig capture) { this.capture = capture; }
 }
 

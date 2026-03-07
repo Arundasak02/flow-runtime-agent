@@ -4,6 +4,7 @@ import com.flow.agent.config.AgentConfig;
 import com.flow.agent.config.ConfigLoader;
 import com.flow.agent.context.FlowContext;
 import com.flow.agent.filter.FilterChain;
+import com.flow.agent.instrumentation.CheckpointInterceptor;
 import com.flow.agent.instrumentation.FlowTransformer;
 import com.flow.agent.instrumentation.ProxyResolver;
 import com.flow.agent.monitor.AgentMetrics;
@@ -70,10 +71,13 @@ public class FlowAgent {
             );
             assembler.start(); // daemon thread
 
-            // 9. Install ByteBuddy transformer
+            // 9. Initialize checkpoint interceptor (PII-safe object extraction)
+            CheckpointInterceptor.init(config.getCapture());
+
+            // 10. Install ByteBuddy transformer
             FlowTransformer.install(instrumentation, filterChain, config);
 
-            // 10. Start agent metrics logger
+            // 11. Start agent metrics logger
             AgentMetrics.startPeriodicLog(60); // every 60 seconds
 
             log("[flow-agent] Initialized. graphId=" + config.getGraphId()

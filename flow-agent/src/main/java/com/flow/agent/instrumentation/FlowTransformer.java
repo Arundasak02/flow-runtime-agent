@@ -4,6 +4,7 @@ import com.flow.agent.config.AgentConfig;
 import com.flow.agent.filter.FilterChain;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.asm.Advice;
+import net.bytebuddy.matcher.ElementMatchers;
 import net.bytebuddy.utility.JavaModule;
 
 import java.lang.instrument.Instrumentation;
@@ -40,6 +41,33 @@ public class FlowTransformer {
                                 Advice.to(MethodAdvice.class)
                                         .on(method -> filterChain.shouldInstrumentMethod(typeDescription, method))
                         )
+                )
+
+                .installOn(instrumentation);
+
+        // ── Checkpoint SDK interception ──────────────────────────────────────
+        // Intercept com.flow.sdk.Flow#checkpoint() calls to emit CHECKPOINT events.
+        // Two-arg: checkpoint(String, Object)
+        // Three-arg: checkpoint(String, Object, FlowCapture)
+        new AgentBuilder.Default()
+                .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
+                .with(new SafeTransformListener())
+                .disableClassFormatChanges()
+
+                .type(ElementMatchers.named("com.flow.sdk.Flow"))
+
+                .transform((builder, typeDescription, classLoader, module, protectionDomain) ->
+                        builder
+                                // Two-arg: checkpoint(String, Object)
+                                .visit(Advice.to(CheckpointInterceptor.TwoArgAdvice.class)
+                                        .on(ElementMatchers.named("checkpoint")
+                                                .and(ElementMatchers.isStatic())
+                                                .and(ElementMatchers.takesArguments(2))))
+                                // Three-arg: checkpoint(String, Object, FlowCapture)
+                                .visit(Advice.to(CheckpointInterceptor.ThreeArgAdvice.class)
+                                        .on(ElementMatchers.named("checkpoint")
+                                                .and(ElementMatchers.isStatic())
+                                                .and(ElementMatchers.takesArguments(3))))
                 )
 
                 .installOn(instrumentation);

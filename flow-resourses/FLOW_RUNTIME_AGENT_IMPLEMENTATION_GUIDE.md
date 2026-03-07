@@ -2083,31 +2083,73 @@ These phases build on Phase 1. Implementation details here — full design ratio
 - `FlowSpanProcessor` uses `SpanProcessor` interface (not `SpanExporter`) because we need `onStart()` for METHOD_ENTER events (Q2 decision).
 - Trace context bridge: `FlowContext.traceId` reads from `Span.current().getSpanContext().getTraceId()`.
 
-### 11.2 Phase 3 — Checkpoint SDK
+### 11.2 Phase 3 — Checkpoint SDK (IMPLEMENTED)
 
-**flow-sdk module** (already in repo structure):
+**flow-sdk module** — zero dependencies, customer adds to classpath:
+
+**Annotations for PII-safe field control:**
 
 ```java
-package com.flow.sdk;
+// @FlowExclude — on field or class: permanently excluded from capture
+@FlowExclude
+private String customerEmail;       // NEVER captured — anywhere
 
-/**
- * Flow Checkpoint SDK. Single class. Zero dependencies.
- * Without agent: no-op. With agent: emits CHECKPOINT event.
- */
-public final class Flow {
-    private Flow() {}
+@FlowExclude
+private CreditCard paymentMethod;   // NEVER captured — anywhere
 
-    /**
-     * Attach a key-value checkpoint to the currently executing graph node.
-     * The agent intercepts this method via ByteBuddy.
-     */
-    public static void checkpoint(String key, Object value) {
-        // No-op — agent installs advice that intercepts this call
-    }
+// @FlowInclude — on class: switches to opt-in mode (only marked fields captured)
+@FlowInclude  // class-level: opt-in mode
+public class UserProfile {
+    @FlowInclude
+    private String userId;       // captured — explicitly opted in
+    private String email;        // NOT captured — not opted in
 }
 ```
 
-**Agent-side interception** uses `FlowContext.currentNodeId()` to attach the checkpoint to the **exact method node** — NOT `Span.current()` (which would be wrong; see RUNTIME_PLUGIN_DESIGN §27.12).
+**FlowCapture — call-site overrides:**
+
+```java
+// Include only specific fields at this checkpoint
+Flow.checkpoint("cart", cart, FlowCapture.include("cartId", "total", "itemCount"));
+
+// Exclude additional fields at this checkpoint
+Flow.checkpoint("user", user, FlowCapture.exclude("internalNotes"));
+
+// Control extraction depth
+Flow.checkpoint("order", order, FlowCapture.maxDepth(1));
+```
+
+**Key design rule:** `FlowCapture` can further restrict, but can **never override `@FlowExclude`**.
+A field excluded by annotation is always excluded, regardless of call-site overrides.
+
+**Agent-side implementation:**
+
+- `CheckpointInterceptor` — ByteBuddy advice on `com.flow.sdk.Flow#checkpoint()` (two-arg and three-arg overloads)
+- `ObjectExtractor` — reflection-based recursive field walker with 6 protection layers:
+  1. `@FlowExclude` on class → entire type opaque
+  2. `@FlowExclude` on field → always skipped
+  3. `@FlowInclude` on class → opt-in mode
+  4. Global exclude patterns (config safety net: `*password*`, `*email*`, `*ssn*`, `*token*`, `*creditcard*` etc.)
+  5. `FlowCapture` call-site overrides
+  6. Depth limit (default 2) + field count limit (default 50) + cycle detection
+- Uses `FlowContext.currentNodeId()` to attach checkpoint to the **exact method node**
+- `RuntimeEvent.data` field carries the extracted key-value map
+- `FlowEventSink.emitCheckpoint()` emits `CHECKPOINT` event type
+
+**Configuration:**
+```yaml
+flow:
+  capture:
+    enabled: true
+    max-depth: 2
+    max-fields: 50
+    global-exclude-patterns:
+      - "*password*"
+      - "*email*"
+      - "*ssn*"
+      - "*token*"
+      - "*creditcard*"
+```
 
 ### 11.3 Phase 4 — Cross-Service + Async
 
