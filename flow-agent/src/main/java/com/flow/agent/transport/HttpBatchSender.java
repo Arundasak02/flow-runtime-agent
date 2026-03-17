@@ -1,6 +1,7 @@
 package com.flow.agent.transport;
 
 import com.flow.agent.config.AgentConfig;
+import com.flow.agent.monitor.AgentLogger;
 import com.flow.agent.monitor.AgentMetrics;
 import com.flow.agent.pipeline.RuntimeEvent;
 
@@ -68,30 +69,36 @@ public class HttpBatchSender {
                 requestBuilder.header("Authorization", "Bearer " + apiKey);
             }
 
+            final int batchSize = events.size();
             httpClient.sendAsync(requestBuilder.build(), HttpResponse.BodyHandlers.ofString())
-                    .thenAccept(response -> {
+                    .thenApply(response -> {
                         if (response.statusCode() >= 200 && response.statusCode() < 300) {
                             circuitBreaker.recordSuccess();
                             AgentMetrics.incrementBatchesSent();
+                            AgentLogger.debug(() -> "Batch sent: " + batchSize + " events → HTTP "
+                                    + response.statusCode());
                         } else {
                             circuitBreaker.recordFailure();
-                            AgentMetrics.incrementBatchesFailed();
-                            System.err.println("[flow-agent] FCS returned HTTP "
-                                    + response.statusCode() + " for batch of " + events.size());
+                            AgentLogger.warn("Flow Core Service returned HTTP " + response.statusCode()
+                                    + " for batch of " + batchSize + " events"
+                                    + " — verify flow.server.url=" + baseUrl
+                                    + " and that the /ingest/runtime/batch endpoint is available.");
                         }
+                        return null;
                     })
                     .exceptionally(ex -> {
                         circuitBreaker.recordFailure();
-                        AgentMetrics.incrementBatchesFailed();
-                        System.err.println("[flow-agent] Failed to send batch: " + ex.getMessage());
+                        AgentLogger.warn("Failed to deliver batch of " + batchSize
+                                + " events to " + baseUrl
+                                + " — " + ex.getMessage()
+                                + " (circuit breaker will open after repeated failures)");
                         return null;
                     });
 
         } catch (Throwable t) {
             // Serialization or request-construction failure
-            circuitBreaker.recordFailure();
-            AgentMetrics.incrementBatchesFailed();
-            System.err.println("[flow-agent] Failed to build HTTP request: " + t.getMessage());
+            AgentLogger.warn("Failed to serialize/send batch of " + events.size()
+                    + " events — " + t.getMessage());
         }
     }
 }

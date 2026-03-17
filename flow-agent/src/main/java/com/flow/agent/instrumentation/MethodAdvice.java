@@ -39,9 +39,14 @@ public class MethodAdvice {
             // Build the nodeId (cached after first computation)
             String nodeId = NodeIdBuilder.build(declaringClass, method);
 
-            // Build this span
+            // Build this span.
+            // For the root span of a continued distributed trace, parentSpanId is the
+            // remote caller's spanId (ctx.getRemoteParentSpanId()), not null.
+            // For nested spans, parentSpanId is the current top of the local stack.
             String spanId = TraceIdGenerator.generateSpanId();
-            String parentSpanId = ctx.currentSpanId(); // null if this is the root span
+            String parentSpanId = ctx.isSpanStackEmpty()
+                    ? ctx.getRemoteParentSpanId()   // root span: link to remote caller
+                    : ctx.currentSpanId();           // nested span: link to local parent
 
             ctx.pushSpan(new SpanInfo(spanId, parentSpanId, nodeId, startTimeNs));
 

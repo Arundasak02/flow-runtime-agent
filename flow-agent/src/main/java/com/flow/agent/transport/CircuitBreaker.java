@@ -1,6 +1,7 @@
 package com.flow.agent.transport;
 
 import com.flow.agent.config.AgentConfig;
+import com.flow.agent.monitor.AgentLogger;
 
 /**
  * Three-state circuit breaker: CLOSED → OPEN (after N failures) → HALF_OPEN → CLOSED/OPEN.
@@ -50,6 +51,9 @@ public class CircuitBreaker {
 
     /** Called when an HTTP request succeeds. Resets to CLOSED. */
     public synchronized void recordSuccess() {
+        if (state != State.CLOSED) {
+            AgentLogger.info("Circuit breaker CLOSED — connectivity to Flow Core Service restored.");
+        }
         consecutiveFailures = 0;
         state = State.CLOSED;
     }
@@ -60,9 +64,10 @@ public class CircuitBreaker {
         if (consecutiveFailures >= failureThreshold) {
             state = State.OPEN;
             openTimestamp = System.currentTimeMillis();
-            System.err.println("[flow-agent] Circuit breaker OPEN after "
-                    + consecutiveFailures + " consecutive failures. "
-                    + "Will retry in " + resetTimeoutMs + "ms.");
+            AgentLogger.warn("Circuit breaker OPEN after " + consecutiveFailures
+                    + " consecutive failures — events will be dropped until connectivity recovers."
+                    + " Will probe again in " + resetTimeoutMs + "ms."
+                    + " Check flow.server.url and network connectivity.");
         }
     }
 

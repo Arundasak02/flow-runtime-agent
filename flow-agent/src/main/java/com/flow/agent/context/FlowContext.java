@@ -15,10 +15,17 @@ public class FlowContext {
     private static final ThreadLocal<FlowContext> HOLDER = new ThreadLocal<>();
 
     private final String traceId;
+    private final String remoteParentSpanId; // spanId of the upstream caller's span (null for local root)
     private final Deque<SpanInfo> spanStack = new ArrayDeque<>();
 
     private FlowContext(String traceId) {
         this.traceId = traceId;
+        this.remoteParentSpanId = null;
+    }
+
+    private FlowContext(String traceId, String remoteParentSpanId) {
+        this.traceId = traceId;
+        this.remoteParentSpanId = remoteParentSpanId;
     }
 
     // ── Factory / lifecycle ──────────────────────────────────────────────────
@@ -52,6 +59,28 @@ public class FlowContext {
     }
 
     /**
+     * Initialise a trace context from an upstream (distributed) caller.
+     *
+     * <p>Continues the upstream trace by reusing its {@code traceId}. The remote caller's
+     * {@code spanId} is stored as {@code remoteParentSpanId} so the first local span links
+     * into the remote call tree.
+     *
+     * <p>If {@code remote} is {@code null} or has no traceId, falls back to {@link #initNewTrace()}.
+     *
+     * @param remote the distributed context extracted from inbound headers; may be null
+     * @return the initialised FlowContext
+     */
+    public static FlowContext initFromRemote(DistributedTraceContext remote) {
+        if (remote == null || remote.getTraceId() == null || remote.getTraceId().isEmpty()) {
+            initNewTrace();
+            return HOLDER.get();
+        }
+        FlowContext ctx = new FlowContext(remote.getTraceId(), remote.getParentSpanId());
+        HOLDER.set(ctx);
+        return ctx;
+    }
+
+    /**
      * <strong>CRITICAL:</strong> Remove the ThreadLocal to prevent trace corruption.
      * Must be called at the end of every request / entry-point exit.
      */
@@ -67,6 +96,13 @@ public class FlowContext {
     // ── Span stack operations ────────────────────────────────────────────────
 
     public String getTraceId() { return traceId; }
+
+    /**
+     * The spanId of the upstream remote caller (from distributed trace headers).
+     * Used to set the {@code parentSpanId} of the root local span so it links into
+     * the remote service's call tree. {@code null} if this is a brand-new trace.
+     */
+    public String getRemoteParentSpanId() { return remoteParentSpanId; }
 
     public void pushSpan(SpanInfo span) {
         spanStack.push(span);

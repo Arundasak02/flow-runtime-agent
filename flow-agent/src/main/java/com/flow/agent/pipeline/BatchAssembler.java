@@ -1,6 +1,7 @@
 package com.flow.agent.pipeline;
 
 import com.flow.agent.config.AgentConfig;
+import com.flow.agent.monitor.AgentLogger;
 import com.flow.agent.transport.HttpBatchSender;
 
 import java.util.ArrayList;
@@ -72,7 +73,7 @@ public class BatchAssembler {
                 break;
             } catch (Throwable t) {
                 // Never crash the pipeline thread — log and continue
-                System.err.println("[flow-agent] Pipeline error: " + t.getMessage());
+                AgentLogger.warn("Pipeline error — batch discarded, resuming", t);
                 batch.clear();
             }
         }

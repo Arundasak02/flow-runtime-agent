@@ -1,6 +1,8 @@
 package com.flow.agent.instrumentation;
 
+import com.flow.agent.context.DistributedTraceContext;
 import com.flow.agent.context.FlowContext;
+import com.flow.agent.context.TraceContextExtractor;
 import com.flow.agent.monitor.AgentMetrics;
 import net.bytebuddy.asm.Advice;
 
@@ -8,34 +10,49 @@ import net.bytebuddy.asm.Advice;
  * ByteBuddy advice for HTTP and Kafka entry points.
  *
  * <p>Installed on Spring MVC / Spring WebFlux controllers and Kafka
- * {@code @KafkaListener} methods. Its job is to:
+ * {@code @KafkaListener} methods. Responsibilities:
  * <ol>
- *   <li>Force-initialise a <em>new</em> {@link FlowContext} (fresh traceId) at request entry.</li>
- *   <li>Guarantee {@link FlowContext#clear()} at request exit so no stale context leaks to the
- *       next request on the same thread-pool thread.</li>
+ *   <li><b>Distributed tracing:</b> extract an upstream traceId from inbound headers
+ *       (W3C {@code traceparent}, OTel, Micrometer, Flow-native, B3) and
+ *       <em>continue</em> that trace rather than starting a new one.
+ *       If no upstream context exists, a fresh traceId is generated.</li>
+ *   <li><b>Isolation:</b> guarantee {@link FlowContext#clear()} at request exit so no
+ *       stale context leaks to the next request on the same thread-pool thread.</li>
  * </ol>
  *
- * <p>Without this, the first instrumented method inside the request triggers
- * {@link FlowContext#getOrInit()} which may reuse a stale context left from a previous request
- * (if MethodAdvice's root-span cleanup was somehow missed).
+ * <p>The first argument of the intercepted method is expected to be the inbound request
+ * (e.g. {@code HttpServletRequest}) — ByteBuddy passes it via {@code @Advice.Argument(0)}.
+ * If the argument doesn't have a {@code getHeader()} method the extractor silently returns
+ * null and a fresh trace is created. This makes the advice safe for any controller signature.
  *
- * <p><strong>Phase 1 note:</strong> This advice is currently installed but not wired to a specific
- * entry-point matcher in {@link FlowTransformer}. Full HTTP/Kafka entry detection is wired in
- * Phase 2 when OTel bridge is added. The class is here for completeness and to make the
- * clear-on-exit contract explicit.
+ * <p><strong>Thread safety:</strong> all state is ThreadLocal — no shared mutable state.
  */
 public class EntryPointAdvice {
 
     /**
-     * Force a new trace context at entry — ensures traceId isolation per request.
+     * Extract upstream trace context from the inbound request and initialise {@link FlowContext}.
+     *
+     * @param request the first method argument — expected to be the inbound HTTP request or
+     *                any object exposing {@code getHeader(String)}. May be null.
      */
     @Advice.OnMethodEnter(suppress = Throwable.class)
-    public static void onEnter() {
+    public static void onEnter(@Advice.Argument(value = 0, optional = true) Object request) {
         try {
-            FlowContext.initNewTrace();
+            // Try to extract upstream distributed trace context from inbound headers.
+            // Handles: W3C traceparent, OTel, Micrometer, X-Flow-*, B3.
+            DistributedTraceContext remote = TraceContextExtractor.extract(request);
+
+            if (remote != null) {
+                // Continue the upstream trace — same traceId, link to remote span
+                FlowContext.initFromRemote(remote);
+            } else {
+                // No upstream context — start a fresh trace
+                FlowContext.initNewTrace();
+            }
             AgentMetrics.incrementEventsEmitted(); // counts as trace start
         } catch (Throwable t) {
-            // GOLDEN RULE: never propagate
+            // GOLDEN RULE: never propagate — fall back to fresh trace
+            try { FlowContext.initNewTrace(); } catch (Throwable ignored) {}
         }
     }
 

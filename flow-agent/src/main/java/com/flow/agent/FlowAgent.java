@@ -1,12 +1,14 @@
 package com.flow.agent;
 
 import com.flow.agent.config.AgentConfig;
+import com.flow.agent.config.AgentConfigHolder;
 import com.flow.agent.config.ConfigLoader;
 import com.flow.agent.context.FlowContext;
 import com.flow.agent.filter.FilterChain;
 import com.flow.agent.instrumentation.CheckpointInterceptor;
 import com.flow.agent.instrumentation.FlowTransformer;
 import com.flow.agent.instrumentation.ProxyResolver;
+import com.flow.agent.monitor.AgentLogger;
 import com.flow.agent.monitor.AgentMetrics;
 import com.flow.agent.pipeline.BatchAssembler;
 import com.flow.agent.pipeline.EventRingBuffer;
@@ -44,7 +46,7 @@ public class FlowAgent {
 
             // 2. Kill switch
             if (!config.isEnabled()) {
-                log("[flow-agent] Disabled via config. Exiting premain().");
+                AgentLogger.info("Disabled via config — instrumentation skipped.");
                 return;
             }
 
@@ -53,6 +55,9 @@ public class FlowAgent {
 
             // 4. Initialize FlowContext class loading
             FlowContext.init();
+
+            // 4a. Initialize static config holder (used by advice code for service name / graphId)
+            AgentConfigHolder.init(config);
 
             // 5. Initialize ProxyResolver with package prefixes
             ProxyResolver.init(config.getPackages().getInclude());
@@ -80,12 +85,13 @@ public class FlowAgent {
             // 11. Start agent metrics logger
             AgentMetrics.startPeriodicLog(60); // every 60 seconds
 
-            log("[flow-agent] Initialized. graphId=" + config.getGraphId()
+            AgentLogger.info("Initialized. graphId=" + config.getGraphId()
+                    + " serviceName=" + config.getServiceName()
                     + " packages=" + config.getPackages().getInclude());
 
         } catch (Throwable t) {
             // GOLDEN RULE: never crash the customer's app
-            System.err.println("[flow-agent] Failed to initialize: " + t.getMessage());
+            AgentLogger.error("Failed to initialize — agent is disabled", t);
         }
     }
 
@@ -94,10 +100,6 @@ public class FlowAgent {
      */
     public static void agentmain(String agentArgs, Instrumentation instrumentation) {
         premain(agentArgs, instrumentation);
-    }
-
-    private static void log(String msg) {
-        System.out.println(msg);
     }
 }
 

@@ -57,10 +57,20 @@ public class AgentMetrics {
         long dropped = eventsDropped.getAndSet(0);
         long sent    = batchesSent.getAndSet(0);
         long failed  = batchesFailed.getAndSet(0);
-        System.out.println("[flow-agent] events=" + emitted + "/period"
-                + " dropped=" + dropped
+
+        String stats = "stats: events_emitted=" + emitted
+                + " events_dropped=" + dropped
                 + " batches_sent=" + sent
-                + " batches_failed=" + failed);
+                + " batches_failed=" + failed;
+
+        // Escalate to WARN when drops or failures occurred so ops teams are alerted
+        if (dropped > 0 || failed > 0) {
+            AgentLogger.warn(stats
+                    + (dropped > 0 ? " — ring buffer full, consider increasing flow.pipeline.bufferSize" : "")
+                    + (failed  > 0 ? " — transport failures, check flow.server.url and connectivity" : ""));
+        } else {
+            AgentLogger.info(stats);
+        }
     }
 }
 

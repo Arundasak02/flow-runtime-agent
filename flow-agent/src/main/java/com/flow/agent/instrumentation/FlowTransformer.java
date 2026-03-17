@@ -105,6 +105,76 @@ public class FlowTransformer {
                 )
 
                 .installOn(instrumentation);
+
+        // ── Outgoing HTTP propagation — Java 11 HttpRequest.Builder ─────────
+        // Intercept build() so we can mutate headers before the immutable HttpRequest is created.
+        new AgentBuilder.Default()
+                .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
+                .with(new SafeTransformListener())
+                .disableClassFormatChanges()
+                .type(ElementMatchers.named("java.net.http.HttpRequest$Builder")
+                        .or(ElementMatchers.hasSuperType(
+                                ElementMatchers.named("java.net.http.HttpRequest$Builder"))))
+                .transform((builder, typeDescription, classLoader, module, protectionDomain) ->
+                        builder.visit(Advice.to(OutgoingHttpAdvice.BuilderAdvice.class)
+                                .on(ElementMatchers.named("build"))))
+                .installOn(instrumentation);
+
+        // ── Outgoing HTTP propagation — OkHttp Request.Builder ───────────────
+        new AgentBuilder.Default()
+                .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
+                .with(new SafeTransformListener())
+                .disableClassFormatChanges()
+                .type(ElementMatchers.named("okhttp3.Request$Builder"))
+                .transform((builder, typeDescription, classLoader, module, protectionDomain) ->
+                        builder.visit(Advice.to(OutgoingHttpAdvice.BuilderAdvice.class)
+                                .on(ElementMatchers.named("build"))))
+                .installOn(instrumentation);
+
+        // ── Outgoing HTTP propagation — Spring RestTemplate ──────────────────
+        // Intercept ClientHttpRequest.execute() — the actual outgoing call point where
+        // headers are still mutable via getHeaders().add(). All RestTemplate / WebClient
+        // calls funnel through this interface method.
+        new AgentBuilder.Default()
+                .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
+                .with(new SafeTransformListener())
+                .disableClassFormatChanges()
+                .type(ElementMatchers.hasSuperType(
+                        ElementMatchers.named("org.springframework.http.client.ClientHttpRequest")))
+                .transform((builder, typeDescription, classLoader, module, protectionDomain) ->
+                        builder.visit(Advice.to(OutgoingHttpAdvice.RestTemplateAdvice.class)
+                                .on(ElementMatchers.named("execute")
+                                        .and(ElementMatchers.takesArguments(0)))))
+                .installOn(instrumentation);
+
+        // ── Outgoing HTTP propagation — Apache HttpClient 4/5 ────────────────
+        // CloseableHttpClient.execute(HttpUriRequest, ...) — first arg is the mutable request.
+        new AgentBuilder.Default()
+                .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
+                .with(new SafeTransformListener())
+                .disableClassFormatChanges()
+                .type(ElementMatchers.hasSuperType(
+                        ElementMatchers.named("org.apache.http.impl.client.CloseableHttpClient")
+                                .or(ElementMatchers.named("org.apache.hc.client5.http.impl.classic.CloseableHttpClient"))))
+                .transform((builder, typeDescription, classLoader, module, protectionDomain) ->
+                        builder.visit(Advice.to(OutgoingHttpAdvice.ExecuteAdvice.class)
+                                .on(ElementMatchers.named("execute")
+                                        .and(ElementMatchers.takesArgument(0,
+                                                ElementMatchers.hasSuperType(
+                                                        ElementMatchers.named("org.apache.http.HttpRequest")
+                                                                .or(ElementMatchers.named("org.apache.hc.core5.http.HttpRequest"))))))))
+                .installOn(instrumentation);
+
+        // ── Outgoing HTTP propagation — Feign Client ─────────────────────────
+        new AgentBuilder.Default()
+                .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
+                .with(new SafeTransformListener())
+                .disableClassFormatChanges()
+                .type(ElementMatchers.hasSuperType(ElementMatchers.named("feign.Client")))
+                .transform((builder, typeDescription, classLoader, module, protectionDomain) ->
+                        builder.visit(Advice.to(OutgoingHttpAdvice.ExecuteAdvice.class)
+                                .on(ElementMatchers.named("execute"))))
+                .installOn(instrumentation);
     }
 
     /**
