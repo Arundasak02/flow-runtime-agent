@@ -96,12 +96,21 @@ public class AgentConfig {
     public static class GraphConfig {
         private boolean autoPublish = true;
         private String classpath = "META-INF/flow/flow.json";
+        /**
+         * Optional filesystem path to {@code flow.json}.
+         * <p>
+         * This is useful for production/SaaS deployments where the graph snapshot is mounted
+         * into the container at runtime (instead of being packaged inside the application JAR).
+         */
+        private String filePath;
         private boolean dedup = true;
 
         public boolean isAutoPublish() { return autoPublish; }
         public void setAutoPublish(boolean autoPublish) { this.autoPublish = autoPublish; }
         public String getClasspath() { return classpath; }
         public void setClasspath(String classpath) { this.classpath = classpath; }
+        public String getFilePath() { return filePath; }
+        public void setFilePath(String filePath) { this.filePath = filePath; }
         public boolean isDedup() { return dedup; }
         public void setDedup(boolean dedup) { this.dedup = dedup; }
     }

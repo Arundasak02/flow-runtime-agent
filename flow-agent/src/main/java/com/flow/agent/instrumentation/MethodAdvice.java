@@ -7,6 +7,7 @@ import com.flow.agent.monitor.AgentMetrics;
 import com.flow.agent.pipeline.FlowEventSink;
 import net.bytebuddy.asm.Advice;
 
+import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 
 /**
@@ -27,17 +28,25 @@ public class MethodAdvice {
      * Returns {@code 0L} if anything goes wrong — onExit will skip processing.
      */
     @Advice.OnMethodEnter(suppress = Throwable.class)
-    public static long onEnter(
-            @Advice.Origin Method method,
-            @Advice.Origin Class<?> declaringClass) {
+    public static void onEnter(
+            @Advice.Origin Executable executable,
+            @Advice.Local("startTimeNs") long startTimeNs) {
         try {
             // Get or create trace context for this thread
             FlowContext ctx = FlowContext.getOrInit();
 
-            long startTimeNs = System.nanoTime();
+            startTimeNs = System.nanoTime();
+
+            // Advice validation may involve constructors; only proceed for real methods.
+            if (!(executable instanceof Method)) {
+                startTimeNs = 0L;
+                return;
+            }
+            Method method = (Method) executable;
 
             // Build the nodeId (cached after first computation)
-            String nodeId = NodeIdBuilder.build(declaringClass, method);
+            String nodeId = NodeIdBuilder.build(method.getDeclaringClass(), method);
+            ctx.setLastNodeId(nodeId);
 
             // Build this span.
             // For the root span of a continued distributed trace, parentSpanId is the
@@ -58,11 +67,9 @@ public class MethodAdvice {
             );
 
             AgentMetrics.incrementEventsEmitted();
-            return startTimeNs;
-
         } catch (Throwable t) {
             // GOLDEN RULE: never propagate to customer code
-            return 0L;
+            startTimeNs = 0L;
         }
     }
 
@@ -74,9 +81,7 @@ public class MethodAdvice {
      */
     @Advice.OnMethodExit(onThrowable = Throwable.class, suppress = Throwable.class)
     public static void onExit(
-            @Advice.Enter long startTimeNs,
-            @Advice.Origin Method method,
-            @Advice.Origin Class<?> declaringClass,
+            @Advice.Local("startTimeNs") long startTimeNs,
             @Advice.Thrown Throwable thrown) {
         try {
             if (startTimeNs == 0L) return; // enter failed — nothing to clean up
@@ -101,13 +106,11 @@ public class MethodAdvice {
 
             AgentMetrics.incrementEventsEmitted();
 
-            // CRITICAL: clear ThreadLocal when root span exits to prevent trace corruption
-            if (ctx.isSpanStackEmpty()) {
-                // Signal trace completion so the server triggers the merge pipeline
-                // immediately rather than waiting for the idle-timeout scheduler.
-                FlowEventSink.emitTraceComplete(ctx.getTraceId());
-                FlowContext.clear();
-            }
+            // Do NOT clear ThreadLocal here.
+            // When the controller method itself isn't instrumented, the span stack can
+            // become empty mid-request, causing premature trace completion before any
+            // Flow.checkpoint() calls execute. We rely on EntryPointAdvice to clear at
+            // the actual request boundary.
 
         } catch (Throwable t) {
             // GOLDEN RULE: never propagate to customer code

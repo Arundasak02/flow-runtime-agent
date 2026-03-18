@@ -116,7 +116,10 @@ public class FlowAgent {
         }
 
         long start = System.nanoTime();
-        GraphLoader loader = new GraphLoader(config.getGraph().getClasspath());
+        GraphLoader loader = new GraphLoader(
+                config.getGraph().getClasspath(),
+                config.getGraph().getFilePath()
+        );
         Optional<LoadedGraph> loaded = loader.load();
         if (loaded.isEmpty()) {
             return;

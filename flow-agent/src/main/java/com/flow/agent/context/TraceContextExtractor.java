@@ -328,7 +328,8 @@ public class TraceContextExtractor {
 
                 Method valueMethod = header.getClass().getMethod("value");
                 Object value = valueMethod.invoke(header);
-                if (!(value instanceof byte[] bytes)) return null;
+                if (!(value instanceof byte[])) return null;
+                byte[] bytes = (byte[]) value;
                 return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
             } catch (Throwable ignored) {
                 return null;

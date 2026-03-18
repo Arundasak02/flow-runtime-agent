@@ -13,18 +13,29 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Loads static graph JSON from application classpath.
+ * Loads static graph JSON from application classpath (preferred) or from a filesystem path.
  */
 public class GraphLoader {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private final String classpathLocation;
+    private final String filePath;
 
-    public GraphLoader(String classpathLocation) {
+    public GraphLoader(String classpathLocation, String filePath) {
         this.classpathLocation = classpathLocation;
+        this.filePath = filePath;
     }
 
     public Optional<LoadedGraph> load() {
+        Optional<LoadedGraph> fromClasspath = tryLoadFromClasspath();
+        if (fromClasspath.isPresent()) {
+            return fromClasspath;
+        }
+
+        return tryLoadFromFile();
+    }
+
+    private Optional<LoadedGraph> tryLoadFromClasspath() {
         if (classpathLocation == null || classpathLocation.isBlank()) {
             return Optional.empty();
         }
@@ -35,30 +46,47 @@ public class GraphLoader {
                 return Optional.empty();
             }
 
-            byte[] bytes = in.readAllBytes();
-            String rawJson = new String(bytes, StandardCharsets.UTF_8);
-            JsonNode root = MAPPER.readTree(bytes);
-
-            String graphId = readText(root, "graphId");
-            String version = readText(root, "version");
-            Map<String, Object> metadata = extractMetadata(root.get("metadata"));
-            String hash = readMetadataHash(metadata);
-            if (hash == null) {
-                hash = "sha256:" + sha256(bytes);
-                metadata.put("graphHash", hash);
-            }
-
-            if (graphId == null || graphId.isBlank()) {
-                AgentLogger.warn("Static graph found but graphId is missing: " + classpathLocation);
-                return Optional.empty();
-            }
-
-            AgentLogger.info("Loaded static graph from classpath: " + classpathLocation + " graphId=" + graphId);
-            return Optional.of(new LoadedGraph(rawJson, graphId, version, hash, metadata));
+            return parseLoadedGraph(in.readAllBytes(), "classpath:" + classpathLocation);
         } catch (Exception e) {
             AgentLogger.warn("Failed to load static graph from classpath (" + classpathLocation + "): " + e.getMessage());
             return Optional.empty();
         }
+    }
+
+    private Optional<LoadedGraph> tryLoadFromFile() {
+        if (filePath == null || filePath.isBlank()) {
+            return Optional.empty();
+        }
+
+        try {
+            byte[] bytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(filePath));
+            return parseLoadedGraph(bytes, "file:" + filePath);
+        } catch (Exception e) {
+            AgentLogger.warn("Failed to load static graph from file (" + filePath + "): " + e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    private Optional<LoadedGraph> parseLoadedGraph(byte[] bytes, String origin) throws Exception {
+        String rawJson = new String(bytes, StandardCharsets.UTF_8);
+        JsonNode root = MAPPER.readTree(bytes);
+
+        String graphId = readText(root, "graphId");
+        String version = readText(root, "version");
+        Map<String, Object> metadata = extractMetadata(root.get("metadata"));
+        String hash = readMetadataHash(metadata);
+        if (hash == null) {
+            hash = "sha256:" + sha256(bytes);
+            metadata.put("graphHash", hash);
+        }
+
+        if (graphId == null || graphId.isBlank()) {
+            AgentLogger.warn("Static graph found but graphId is missing (" + origin + ")");
+            return Optional.empty();
+        }
+
+        AgentLogger.info("Loaded static graph from " + origin + " graphId=" + graphId);
+        return Optional.of(new LoadedGraph(rawJson, graphId, version, hash, metadata));
     }
 
     private InputStream openStream(String path) {

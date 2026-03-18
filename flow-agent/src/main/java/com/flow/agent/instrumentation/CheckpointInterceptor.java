@@ -3,6 +3,7 @@ package com.flow.agent.instrumentation;
 import com.flow.agent.config.AgentConfig.CaptureConfig;
 import com.flow.agent.context.FlowContext;
 import com.flow.agent.instrumentation.extract.ObjectExtractor;
+import com.flow.agent.monitor.AgentLogger;
 import com.flow.agent.monitor.AgentMetrics;
 import com.flow.agent.pipeline.FlowEventSink;
 import net.bytebuddy.asm.Advice;
@@ -28,8 +29,15 @@ import java.util.Map;
 public class CheckpointInterceptor {
 
     // Set during agent init — volatile for visibility across class loaders
-    private static volatile ObjectExtractor extractor;
-    private static volatile boolean enabled = false;
+    // Must be public because ByteBuddy inlines advice bytecode into the customer's
+    // `com.flow.sdk.Flow` class. The inlined code is not "inside" this class at
+    // runtime, so accessing private fields would trigger IllegalAccessError.
+    public static volatile ObjectExtractor extractor;
+    public static volatile boolean enabled = false;
+    public static volatile boolean logOnce = false;
+    // DEBUG (test/runtime diagnosis): flips to true when advice is invoked.
+    // Not used for production logic.
+    public static volatile boolean adviceInvoked = false;
 
     /**
      * Called once during agent startup to wire up the extractor.
@@ -53,15 +61,51 @@ public class CheckpointInterceptor {
                 @Advice.Argument(0) String key,
                 @Advice.Argument(1) Object value) {
             try {
-                if (!enabled) return;
+                adviceInvoked = true;
+                if (!enabled) {
+                    if (!logOnce) {
+                        logOnce = true;
+                        AgentLogger.info("CHECKPOINT intercepted key=" + key + " enabled=false");
+                    }
+                    return;
+                }
                 ObjectExtractor ext = extractor;
-                if (ext == null) return;
+                if (ext == null) {
+                    if (!logOnce) {
+                        logOnce = true;
+                        AgentLogger.info("CHECKPOINT intercepted key=" + key + " extractor=null");
+                    }
+                    return;
+                }
 
                 FlowContext ctx = FlowContext.current();
-                if (ctx == null) return;
+                if (ctx == null) {
+                    if (!logOnce) {
+                        logOnce = true;
+                        AgentLogger.info("CHECKPOINT intercepted key=" + key + " ctx=null");
+                    }
+                    return;
+                }
 
                 String nodeId = ctx.currentNodeId();
-                if (nodeId == null) return;
+                String lastNodeId = ctx.lastNodeId();
+
+                // One-time proof that Flow.checkpoint(...) advice is running.
+                // We log BEFORE deciding whether the nodeId is usable.
+                if (!logOnce) {
+                    logOnce = true;
+                    AgentLogger.info(
+                            "CHECKPOINT intercepted key=" + key +
+                                    " nodeId=" + nodeId +
+                                    " lastNodeId=" + lastNodeId
+                    );
+                }
+                if (nodeId == null || nodeId.isBlank()) {
+                    // If controller methods aren't instrumented, the span stack can be empty
+                    // at the checkpoint call site. Fall back to the last nodeId we saw.
+                    nodeId = lastNodeId;
+                }
+                if (nodeId == null || nodeId.isBlank()) return;
 
                 Map<String, Object> data = ext.extract(key, value, null);
 
@@ -95,15 +139,49 @@ public class CheckpointInterceptor {
                 @Advice.Argument(1) Object value,
                 @Advice.Argument(2) Object capture) {
             try {
-                if (!enabled) return;
+                adviceInvoked = true;
+                if (!enabled) {
+                    if (!logOnce) {
+                        logOnce = true;
+                        AgentLogger.info("CHECKPOINT intercepted key=" + key + " enabled=false");
+                    }
+                    return;
+                }
                 ObjectExtractor ext = extractor;
-                if (ext == null) return;
+                if (ext == null) {
+                    if (!logOnce) {
+                        logOnce = true;
+                        AgentLogger.info("CHECKPOINT intercepted key=" + key + " extractor=null");
+                    }
+                    return;
+                }
 
                 FlowContext ctx = FlowContext.current();
-                if (ctx == null) return;
+                if (ctx == null) {
+                    if (!logOnce) {
+                        logOnce = true;
+                        AgentLogger.info("CHECKPOINT intercepted key=" + key + " ctx=null");
+                    }
+                    return;
+                }
 
                 String nodeId = ctx.currentNodeId();
-                if (nodeId == null) return;
+                String lastNodeId = ctx.lastNodeId();
+
+                if (!logOnce) {
+                    logOnce = true;
+                    AgentLogger.info(
+                            "CHECKPOINT intercepted key=" + key +
+                                    " nodeId=" + nodeId +
+                                    " lastNodeId=" + lastNodeId
+                    );
+                }
+                if (nodeId == null || nodeId.isBlank()) {
+                    // If controller methods aren't instrumented, the span stack can be empty
+                    // at the checkpoint call site. Fall back to the last nodeId we saw.
+                    nodeId = lastNodeId;
+                }
+                if (nodeId == null || nodeId.isBlank()) return;
 
                 Map<String, Object> data = ext.extract(key, value, capture);
 
