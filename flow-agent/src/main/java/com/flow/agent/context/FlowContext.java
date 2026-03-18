@@ -17,6 +17,9 @@ public class FlowContext {
     private final String traceId;
     private final String remoteParentSpanId; // spanId of the upstream caller's span (null for local root)
     private final Deque<SpanInfo> spanStack = new ArrayDeque<>();
+    // Tracks the most recent nodeId seen by MethodAdvice, so checkpoints can still be attached
+    // when the span stack is temporarily empty (e.g., if the entry controller isn't instrumented).
+    private String lastNodeId;
 
     private FlowContext(String traceId) {
         this.traceId = traceId;
@@ -130,6 +133,14 @@ public class FlowContext {
     public String currentNodeId() {
         SpanInfo top = spanStack.peek();
         return top != null ? top.getNodeId() : null;
+    }
+
+    public void setLastNodeId(String nodeId) {
+        this.lastNodeId = nodeId;
+    }
+
+    public String lastNodeId() {
+        return lastNodeId;
     }
 
     public boolean isSpanStackEmpty() {

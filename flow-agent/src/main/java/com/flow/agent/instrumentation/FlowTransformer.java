@@ -39,7 +39,9 @@ public class FlowTransformer {
                 .transform((builder, typeDescription, classLoader, module, protectionDomain) ->
                         builder.visit(
                                 Advice.to(MethodAdvice.class)
-                                        .on(method -> filterChain.shouldInstrumentMethod(typeDescription, method))
+                                        // Exclude constructors explicitly to avoid ByteBuddy advice/origin
+                                        // validation issues on some proxy classes (e.g. CGLIB $$SpringCGLIB$$0).
+                                        .on(method -> !method.isConstructor() && filterChain.shouldInstrumentMethod(typeDescription, method))
                         )
                 )
 

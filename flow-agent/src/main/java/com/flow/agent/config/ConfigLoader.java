@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -200,6 +199,11 @@ public class ConfigLoader {
             config.getGraph().setClasspath(graphClasspath);
         }
 
+        String graphFilePath = System.getProperty("flow.graph.file-path");
+        if (graphFilePath != null && !graphFilePath.isEmpty()) {
+            config.getGraph().setFilePath(graphFilePath);
+        }
+
         String graphDedup = System.getProperty("flow.graph.dedup");
         if (graphDedup != null) {
             config.getGraph().setDedup(Boolean.parseBoolean(graphDedup));
@@ -314,6 +318,8 @@ public class ConfigLoader {
                 v -> config.getGraph().setAutoPublish(Boolean.parseBoolean(v)));
         applyIfPresent(props, "flow.graph.classpath",
                 v -> config.getGraph().setClasspath(v));
+        applyIfPresent(props, "flow.graph.file-path",
+                v -> config.getGraph().setFilePath(v));
         applyIfPresent(props, "flow.graph.dedup",
                 v -> config.getGraph().setDedup(Boolean.parseBoolean(v)));
     }
