@@ -315,7 +315,24 @@ public class TraceContextExtractor {
             Method m = obj.getClass().getMethod("getHeader", String.class);
             return (String) m.invoke(obj, name);
         } catch (Throwable t) {
-            return null;
+            // Not an HTTP request. Try Kafka ConsumerRecord-style headers:
+            // record.headers().lastHeader(name).value() → byte[]
+            try {
+                Method headersMethod = obj.getClass().getMethod("headers");
+                Object headers = headersMethod.invoke(obj);
+                if (headers == null) return null;
+
+                Method lastHeader = headers.getClass().getMethod("lastHeader", String.class);
+                Object header = lastHeader.invoke(headers, name);
+                if (header == null) return null;
+
+                Method valueMethod = header.getClass().getMethod("value");
+                Object value = valueMethod.invoke(header);
+                if (!(value instanceof byte[] bytes)) return null;
+                return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+            } catch (Throwable ignored) {
+                return null;
+            }
         }
     }
 

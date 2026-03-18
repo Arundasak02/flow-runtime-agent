@@ -24,11 +24,13 @@ public class MethodExcludeFilter {
     private final boolean skipGettersSetters;
     private final boolean skipConstructors;
     private final boolean skipSynthetic;
+    private final boolean skipPrivateMethods;
 
     public MethodExcludeFilter(AgentConfig.FilterConfig config) {
         this.skipGettersSetters = config.isSkipGettersSetters();
         this.skipConstructors = config.isSkipConstructors();
         this.skipSynthetic = config.isSkipSynthetic();
+        this.skipPrivateMethods = config.isSkipPrivateMethods();
     }
 
     /**
@@ -39,6 +41,7 @@ public class MethodExcludeFilter {
 
         if (EXCLUDED_NAMES.contains(name)) return true;
         if (skipConstructors && method.isConstructor()) return true;
+        if (skipPrivateMethods && method.isPrivate()) return true;
         if (skipSynthetic && method.isSynthetic()) return true;
         if (skipGettersSetters && isGetterOrSetter(name)) return true;
 
