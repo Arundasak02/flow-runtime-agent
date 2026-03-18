@@ -85,6 +85,21 @@ public class ConfigLoader {
         if (enabled != null && !enabled.isEmpty()) {
             config.setEnabled(Boolean.parseBoolean(enabled));
         }
+
+        String graphAutoPublish = System.getenv("FLOW_GRAPH_AUTO_PUBLISH");
+        if (graphAutoPublish != null && !graphAutoPublish.isEmpty()) {
+            config.getGraph().setAutoPublish(Boolean.parseBoolean(graphAutoPublish));
+        }
+
+        String graphClasspath = System.getenv("FLOW_GRAPH_CLASSPATH");
+        if (graphClasspath != null && !graphClasspath.isEmpty()) {
+            config.getGraph().setClasspath(graphClasspath);
+        }
+
+        String graphDedup = System.getenv("FLOW_GRAPH_DEDUP");
+        if (graphDedup != null && !graphDedup.isEmpty()) {
+            config.getGraph().setDedup(Boolean.parseBoolean(graphDedup));
+        }
     }
 
     // ── System property mapping ───────────────────────────────────────────────
@@ -173,6 +188,21 @@ public class ConfigLoader {
         String skipSynthetic = System.getProperty("flow.filter.skip-synthetic");
         if (skipSynthetic != null) {
             config.getFilter().setSkipSynthetic(Boolean.parseBoolean(skipSynthetic));
+        }
+
+        String graphAutoPublish = System.getProperty("flow.graph.auto-publish");
+        if (graphAutoPublish != null) {
+            config.getGraph().setAutoPublish(Boolean.parseBoolean(graphAutoPublish));
+        }
+
+        String graphClasspath = System.getProperty("flow.graph.classpath");
+        if (graphClasspath != null && !graphClasspath.isEmpty()) {
+            config.getGraph().setClasspath(graphClasspath);
+        }
+
+        String graphDedup = System.getProperty("flow.graph.dedup");
+        if (graphDedup != null) {
+            config.getGraph().setDedup(Boolean.parseBoolean(graphDedup));
         }
 
         // ── Capture config ──────────────────────────────────────────────────
@@ -279,6 +309,13 @@ public class ConfigLoader {
                 v -> config.getCapture().setMaxFields(Integer.parseInt(v)));
         applyIfPresent(props, "flow.capture.global-exclude-patterns",
                 v -> config.getCapture().setGlobalExcludePatterns(splitCsv(v)));
+
+        applyIfPresent(props, "flow.graph.auto-publish",
+                v -> config.getGraph().setAutoPublish(Boolean.parseBoolean(v)));
+        applyIfPresent(props, "flow.graph.classpath",
+                v -> config.getGraph().setClasspath(v));
+        applyIfPresent(props, "flow.graph.dedup",
+                v -> config.getGraph().setDedup(Boolean.parseBoolean(v)));
     }
 
     private static void applyIfPresent(Properties props, String key,

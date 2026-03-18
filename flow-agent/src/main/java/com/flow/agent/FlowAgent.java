@@ -5,6 +5,9 @@ import com.flow.agent.config.AgentConfigHolder;
 import com.flow.agent.config.ConfigLoader;
 import com.flow.agent.context.FlowContext;
 import com.flow.agent.filter.FilterChain;
+import com.flow.agent.graph.GraphLoader;
+import com.flow.agent.graph.LoadedGraph;
+import com.flow.agent.graph.StaticGraphPublisher;
 import com.flow.agent.instrumentation.CheckpointInterceptor;
 import com.flow.agent.instrumentation.FlowTransformer;
 import com.flow.agent.instrumentation.ProxyResolver;
@@ -18,6 +21,7 @@ import com.flow.agent.transport.CircuitBreaker;
 import com.flow.agent.transport.HttpBatchSender;
 
 import java.lang.instrument.Instrumentation;
+import java.util.Optional;
 
 /**
  * Flow Runtime Agent entry point.
@@ -70,6 +74,9 @@ public class FlowAgent {
             CircuitBreaker circuitBreaker = new CircuitBreaker(config.getCircuitBreaker());
             HttpBatchSender sender = new HttpBatchSender(config.getServer(), circuitBreaker);
 
+            // 7a. Optionally auto-publish static graph from application classpath.
+            maybePublishStaticGraph(config, circuitBreaker);
+
             // 8. Start batch assembler daemon thread
             BatchAssembler assembler = new BatchAssembler(
                     ringBuffer, sender, config.getPipeline(), config.getGraphId()
@@ -100,6 +107,40 @@ public class FlowAgent {
      */
     public static void agentmain(String agentArgs, Instrumentation instrumentation) {
         premain(agentArgs, instrumentation);
+    }
+
+    private static void maybePublishStaticGraph(AgentConfig config, CircuitBreaker circuitBreaker) {
+        if (!config.getGraph().isAutoPublish()) {
+            AgentLogger.info("Static graph auto-publish disabled.");
+            return;
+        }
+
+        long start = System.nanoTime();
+        GraphLoader loader = new GraphLoader(config.getGraph().getClasspath());
+        Optional<LoadedGraph> loaded = loader.load();
+        if (loaded.isEmpty()) {
+            return;
+        }
+
+        LoadedGraph graph = loaded.get();
+        if (!config.getGraphId().equals(graph.graphId())) {
+            AgentLogger.warn("Loaded graphId (" + graph.graphId() + ") differs from flow.graph-id ("
+                    + config.getGraphId() + "). Runtime events use flow.graph-id.");
+        }
+
+        StaticGraphPublisher publisher = new StaticGraphPublisher(
+                config.getServer(),
+                circuitBreaker,
+                config.getGraph().isDedup()
+        );
+        publisher.publishAsync(graph);
+
+        long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+        if (elapsedMs > 50) {
+            AgentLogger.warn("Static graph load took " + elapsedMs + "ms (target <= 50ms).");
+        } else {
+            AgentLogger.debug(() -> "Static graph load took " + elapsedMs + "ms.");
+        }
     }
 }
 

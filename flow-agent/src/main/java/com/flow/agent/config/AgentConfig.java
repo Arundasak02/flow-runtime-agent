@@ -17,6 +17,7 @@ public class AgentConfig {
     private PipelineConfig pipeline = new PipelineConfig();
     private CircuitBreakerConfig circuitBreaker = new CircuitBreakerConfig();
     private CaptureConfig capture = new CaptureConfig();
+    private GraphConfig graph = new GraphConfig();
 
     // ── Nested config classes ────────────────────────────────────────────────
 
@@ -92,6 +93,19 @@ public class AgentConfig {
         public void setResetTimeoutMs(int resetTimeoutMs) { this.resetTimeoutMs = resetTimeoutMs; }
     }
 
+    public static class GraphConfig {
+        private boolean autoPublish = true;
+        private String classpath = "META-INF/flow/flow.json";
+        private boolean dedup = true;
+
+        public boolean isAutoPublish() { return autoPublish; }
+        public void setAutoPublish(boolean autoPublish) { this.autoPublish = autoPublish; }
+        public String getClasspath() { return classpath; }
+        public void setClasspath(String classpath) { this.classpath = classpath; }
+        public boolean isDedup() { return dedup; }
+        public void setDedup(boolean dedup) { this.dedup = dedup; }
+    }
+
     /**
      * Configuration for checkpoint object extraction and PII safety.
      *
@@ -161,5 +175,8 @@ public class AgentConfig {
 
     public CaptureConfig getCapture() { return capture; }
     public void setCapture(CaptureConfig capture) { this.capture = capture; }
+
+    public GraphConfig getGraph() { return graph; }
+    public void setGraph(GraphConfig graph) { this.graph = graph; }
 }
 
