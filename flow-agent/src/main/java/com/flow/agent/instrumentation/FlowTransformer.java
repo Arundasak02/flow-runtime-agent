@@ -147,6 +147,21 @@ public class FlowTransformer {
                                         .and(ElementMatchers.takesArguments(0)))))
                 .installOn(instrumentation);
 
+        // ── Outgoing HTTP propagation — Spring WebClient (reactive) ──────────
+        // WebClient builds an immutable ClientRequest via ClientRequest.Builder#build().
+        // Intercept build() so we can inject headers while the builder is still mutable.
+        new AgentBuilder.Default()
+                .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
+                .with(new SafeTransformListener())
+                .disableClassFormatChanges()
+                .type(ElementMatchers.hasSuperType(
+                        ElementMatchers.named("org.springframework.web.reactive.function.client.ClientRequest$Builder")))
+                .transform((builder, typeDescription, classLoader, module, protectionDomain) ->
+                        builder.visit(Advice.to(OutgoingHttpAdvice.BuilderAdvice.class)
+                                .on(ElementMatchers.named("build")
+                                        .and(ElementMatchers.takesArguments(0)))))
+                .installOn(instrumentation);
+
         // ── Outgoing HTTP propagation — Apache HttpClient 4/5 ────────────────
         // CloseableHttpClient.execute(HttpUriRequest, ...) — first arg is the mutable request.
         new AgentBuilder.Default()

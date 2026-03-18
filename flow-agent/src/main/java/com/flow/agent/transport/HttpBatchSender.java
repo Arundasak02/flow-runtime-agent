@@ -28,12 +28,14 @@ public class HttpBatchSender {
     private final String apiKey;
     private final CircuitBreaker circuitBreaker;
     private final PayloadSerializer serializer;
+    private final int readTimeoutMs;
 
     public HttpBatchSender(AgentConfig.ServerConfig serverConfig, CircuitBreaker circuitBreaker) {
         this.baseUrl = serverConfig.getUrl();
         this.apiKey = serverConfig.getApiKey();
         this.circuitBreaker = circuitBreaker;
         this.serializer = new PayloadSerializer();
+        this.readTimeoutMs = serverConfig.getReadTimeoutMs();
 
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(serverConfig.getConnectTimeoutMs()))
@@ -60,7 +62,7 @@ public class HttpBatchSender {
 
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(baseUrl + "/ingest/runtime/batch"))
-                    .timeout(Duration.ofMillis(5000))
+                    .timeout(Duration.ofMillis(readTimeoutMs))
                     .header("Content-Type", "application/json")
                     .header("Content-Encoding", "gzip")
                     .POST(HttpRequest.BodyPublishers.ofByteArray(body));
@@ -79,6 +81,7 @@ public class HttpBatchSender {
                                     + response.statusCode());
                         } else {
                             circuitBreaker.recordFailure();
+                            AgentMetrics.incrementBatchesFailed();
                             AgentLogger.warn("Flow Core Service returned HTTP " + response.statusCode()
                                     + " for batch of " + batchSize + " events"
                                     + " — verify flow.server.url=" + baseUrl
@@ -88,6 +91,7 @@ public class HttpBatchSender {
                     })
                     .exceptionally(ex -> {
                         circuitBreaker.recordFailure();
+                        AgentMetrics.incrementBatchesFailed();
                         AgentLogger.warn("Failed to deliver batch of " + batchSize
                                 + " events to " + baseUrl
                                 + " — " + ex.getMessage()
@@ -97,6 +101,7 @@ public class HttpBatchSender {
 
         } catch (Throwable t) {
             // Serialization or request-construction failure
+            AgentMetrics.incrementBatchesFailed();
             AgentLogger.warn("Failed to serialize/send batch of " + events.size()
                     + " events — " + t.getMessage());
         }
