@@ -31,17 +31,18 @@ public class NodeIdBuilder {
     private static final Map<Method, String> CACHE = new ConcurrentHashMap<>(256);
 
     /**
-     * Regex that strips ALL fully-qualified package prefixes, matching the adapter's
-     * {@code SignatureNormalizer} exactly.
+     * Regex that strips all package segments and keeps only the simple class name,
+     * matching the adapter's {@code SignatureNormalizer} exactly.
      *
      * <p>Converts {@code org.springframework.kafka.core.KafkaTemplate} → {@code KafkaTemplate},
-     * {@code java.util.List} → {@code List}, etc.
+     * {@code java.util.List} → {@code List},
+     * {@code com.example.dto.Order} → {@code Order}.
      *
-     * <p>Pattern: matches a lowercase package prefix (e.g. {@code org.example.foo.}) followed by
-     * an uppercase class name, and replaces the whole match with just the class name.
+     * <p><strong>WARNING:</strong> These substitution rules MUST exactly match the scanner's
+     * {@code SignatureNormalizer}. Any deviation produces an unresolvable nodeId.
      */
     private static final Pattern FQN_PATTERN =
-            Pattern.compile("\\b[a-z][a-z0-9]*(?:\\.[a-z0-9$_]+)*\\.([A-Z][a-zA-Z0-9$_]*)");
+            Pattern.compile("\\b(?:[a-z][a-z0-9]*\\.)*([a-z][a-z0-9$_]*)\\.([A-Z][a-zA-Z0-9$_]*)");
 
     /**
      * Build (or retrieve from cache) the nodeId for the given declaring class and method.
@@ -88,21 +89,21 @@ public class NodeIdBuilder {
     /**
      * Simplify Java fully-qualified type names to match flow.json conventions.
      *
-     * <p>Uses the same regex as the adapter's {@code SignatureNormalizer} — strips ALL
-     * fully-qualified package prefixes so both sides produce identical nodeId strings.
+     * <p>Uses the same regex as the adapter's {@code SignatureNormalizer} — keeps the last
+     * package segment before the class name to prevent false deduplication of types sharing
+     * the same simple name from different packages.
      *
      * <ul>
      *   <li>{@code java.lang.String} → {@code String}</li>
      *   <li>{@code java.util.List<java.lang.String>} → {@code List<String>}</li>
-     *   <li>{@code org.springframework.kafka.core.KafkaTemplate<String, String>}
-     *       → {@code KafkaTemplate<String, String>}</li>
+     *   <li>{@code com.example.dto.Order} → {@code Order}</li>
      * </ul>
      *
      * <p><strong>WARNING:</strong> These substitution rules MUST exactly match the scanner's
      * {@code SignatureNormalizer}. Any deviation produces an unresolvable nodeId.
      */
     static String simplifyType(String typeName) {
-        return FQN_PATTERN.matcher(typeName).replaceAll("$1");
+        return FQN_PATTERN.matcher(typeName).replaceAll("$2");
     }
 }
 

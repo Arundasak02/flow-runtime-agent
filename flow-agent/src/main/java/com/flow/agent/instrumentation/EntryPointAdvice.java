@@ -4,6 +4,7 @@ import com.flow.agent.context.DistributedTraceContext;
 import com.flow.agent.context.FlowContext;
 import com.flow.agent.context.TraceContextExtractor;
 import com.flow.agent.monitor.AgentMetrics;
+import com.flow.agent.pipeline.FlowEventSink;
 import net.bytebuddy.asm.Advice;
 
 /**
@@ -57,11 +58,18 @@ public class EntryPointAdvice {
     }
 
     /**
-     * Always clear the context at exit — prevents trace-context leaks on thread reuse.
+     * Signals trace completion and clears the context at exit — prevents trace-context leaks on thread reuse.
+     *
+     * <p>Emitting a TRACE_COMPLETE event before clearing lets FCS trigger an immediate merge
+     * rather than waiting for the 3-second idle timeout (Bug #5 fix).
      */
     @Advice.OnMethodExit(onThrowable = Throwable.class, suppress = Throwable.class)
     public static void onExit() {
         try {
+            FlowContext ctx = FlowContext.current();
+            if (ctx != null) {
+                FlowEventSink.emitTraceComplete(ctx.getTraceId());
+            }
             FlowContext.clear();
         } catch (Throwable t) {
             // GOLDEN RULE: never propagate
